@@ -1,40 +1,44 @@
-# Telephone Voice Bot
+# Telephone Voice Bot with OpenAI Realtime API
 
-A real-time voice bot that connects Amazon Connect to OpenAI's Realtime GPT-4o-mini API using WebSockets for bidirectional audio streaming.
+A real-time voice assistant using Twilio Voice, FastAPI, and OpenAI's Realtime API for Speech-to-Speech (S2S) conversations. The AI speaks as **Uttam Giri** with dynamic resume context injection.
 
 ## Architecture
 
 ```
-Amazon Connect → WebSocket Server → OpenAI Realtime API → Audio Playback
+Twilio Phone Call → FastAPI WebSocket → OpenAI Realtime API → Audio Response → Twilio → Caller
 ```
 
 ## Features
 
-- Real-time microphone capture and audio streaming
-- WebSocket server for handling Amazon Connect connections
-- OpenAI Realtime GPT-4o-mini integration for voice conversations
-- Bidirectional audio: captures user speech and plays AI responses
-- Local testing support with microphone client
-- Docker containerization for easy deployment
+- **Real-time Speech-to-Speech**: Direct audio streaming without intermediate text conversion
+- **Twilio Media Streams Integration**: Seamless phone call handling
+- **OpenAI Realtime API**: GPT Realtime model for low-latency conversations
+- **Dynamic Resume Context**: Automatically searches and injects relevant resume information
+- **FastAPI Framework**: Modern, async Python web framework
+- **Persona-Driven**: AI speaks as "Uttam Giri" in first person
+
+## Prerequisites
+
+- Python 3.9+ (tested with 3.9.13)
+- Twilio account with Voice-enabled phone number
+- OpenAI account with Realtime API access
+- OpenAI API Key
+- (Optional) ngrok for local testing
 
 ## Project Structure
 
 ```
-voice-bot/
+telephone-voice-bot/
 ├── app/
 │   ├── __init__.py
-│   ├── audio_utils.py           # Mic capture + playback
-│   ├── openai_client.py         # OpenAI Realtime WebSocket client
-│   ├── connect_server.py        # WebSocket server handling Amazon Connect
-│   ├── llm_pipeline.py          # Optional: placeholder for text processing
+│   ├── resume_context.py        # Resume context management
+│   ├── llm_manager.py           # Resume search and context injection
 │
-├── tests/
-│   ├── test_mic_client.py       # Local microphone test client
-│
-├── .env                         # API keys, AWS region, model info
-├── Dockerfile                   # Containerization for deployment
+├── main.py                      # FastAPI server - Main entry point
+├── .env                         # Environment variables
+├── Dockerfile                   # Containerization
 ├── requirements.txt
-├── README.md
+└── README.md
 ```
 
 ## Setup
@@ -50,164 +54,205 @@ pip install -r requirements.txt
 brew install portaudio
 ```
 
-On Linux (Ubuntu/Debian):
-```bash
-sudo apt-get install portaudio19-dev
-```
-
 ### 2. Configure Environment Variables
 
-Edit `.env` file with your OpenAI API key:
+Create a `.env` file in the project root:
 
-```bash
-OPENAI_API_KEY=sk-your-actual-api-key-here
-OPENAI_MODEL=gpt-4o-mini-realtime-preview-2024-12-17
-WEBSOCKET_HOST=0.0.0.0
-WEBSOCKET_PORT=8765
-DEBUG=true
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-realtime
+VOICE=cove
+TEMPERATURE=0.8
+PORT=5050
 ```
 
-**Important:** Do not commit `.env` to version control. It's already in `.gitignore`.
+**Note:** 
+- `OPENAI_MODEL` should be `gpt-realtime` for the new Realtime API
+- `VOICE` can be `alloy`, `echo`, `shimmer`, or `cove` (default: `cove` for Uttam Giri persona)
+- `TEMPERATURE` controls response randomness (0.0-1.0)
 
-### 3. Run the WebSocket Server
-
-```bash
-python app/connect_server.py
-```
-
-The server will start on `ws://0.0.0.0:8765`
-
-### 4. Test Locally (Optional)
-
-In a separate terminal, run the microphone test client:
+### 3. Run the Server
 
 ```bash
-python tests/test_mic_client.py
+uvicorn main:app --host 0.0.0.0 --port 5050
 ```
 
-This will:
-- Connect to the local WebSocket server
-- Capture audio from your microphone
-- Send it to OpenAI Realtime API
-- Play back the AI's audio responses
+Or use Python directly:
 
-## Usage
+```bash
+python main.py
+```
 
-### Local Testing
+You should see:
+```
+🚀 Starting Twilio Voice AI Assistant
+📞 OpenAI Model: gpt-realtime
+🎤 Voice: cove
+🌐 Server running on port 5050
+INFO:     Started server process
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5050
+```
 
-1. Start the server:
-   ```bash
-   python app/connect_server.py
+## Twilio Setup
+
+### 1. Expose Your Server (Local Development)
+
+Use ngrok to expose your local server:
+
+```bash
+ngrok http 5050
+```
+
+Copy the ngrok URL (e.g., `https://abc123.ngrok.app`)
+
+### 2. Configure Twilio Phone Number
+
+1. Go to [Twilio Console](https://console.twilio.com)
+2. Navigate to Phone Numbers → Manage → Active Numbers
+3. Click on your Voice-enabled number
+4. Under "Voice & Fax", set **A CALL COMES IN** webhook to:
    ```
-
-2. Run the test client:
-   ```bash
-   python tests/test_mic_client.py
+   https://your-ngrok-url.ngrok.app/incoming-call
    ```
+5. Save the configuration
 
-3. Speak into your microphone and listen for AI responses.
+### 3. Test Your Setup
 
-### Amazon Connect Integration
+1. Make sure your server is running
+2. Ensure ngrok is active
+3. Call your Twilio phone number
+4. You should hear: "Please wait while we connect your call..."
+5. Then: "OK, you can start talking!"
+6. The AI will greet you: "Hey, I am Uttam speaking. How can I help you today?"
+7. Start talking - you'll hear real-time responses!
 
-The WebSocket server is ready to accept connections from Amazon Connect. Configure your Connect contact flow to:
+## How It Works
 
-1. Connect to your WebSocket server endpoint
-2. Stream audio in PCM16 format (16kHz, mono)
-3. Receive audio responses from the server
+### 1. Incoming Call Flow
 
-The server expects:
-- **Input:** Raw PCM16 audio bytes (16kHz, mono, 16-bit)
-- **Output:** Raw PCM16 audio bytes (same format)
+1. Twilio receives call → sends webhook to `/incoming-call`
+2. FastAPI returns TwiML → instructs Twilio to connect to `/media-stream` WebSocket
+3. Twilio connects to WebSocket → bidirectional audio streaming begins
 
-## Docker Deployment
+### 2. OpenAI Realtime Integration
 
-### Build the Image
+1. FastAPI establishes WebSocket connection to OpenAI Realtime API
+2. Sends `session.update` with Uttam Giri persona and instructions
+3. Sends initial greeting via `response.create`
+4. Proxies audio between Twilio and OpenAI in real-time
 
-```bash
-docker build -t voice-bot .
-```
+### 3. Resume Context Injection
 
-### Run the Container
-
-```bash
-docker run -p 8765:8765 --env-file .env voice-bot
-```
-
-**Note:** For production, ensure your `.env` file has the correct API keys and configuration.
+- When user speaks, OpenAI transcribes audio
+- System detects if question is about "Uttam" or related topics
+- Searches `resume_full.txt` for relevant information
+- Injects matching context into LLM via `response.create`
+- AI responds with accurate, personalized information
 
 ## Configuration
 
-### Audio Settings
+### Environment Variables
 
-- **Sample Rate:** 16,000 Hz
-- **Channels:** 1 (mono)
-- **Format:** PCM16 (16-bit signed integers)
-- **Chunk Size:** 1024 samples (default)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | *required* | Your OpenAI API key |
+| `OPENAI_MODEL` | `gpt-realtime` | OpenAI Realtime model |
+| `VOICE` | `cove` | AI voice (alloy, echo, shimmer, cove) |
+| `TEMPERATURE` | `0.8` | Response randomness (0.0-1.0) |
+| `PORT` | `5050` | Server port |
 
-### WebSocket Settings
+### System Message
 
-- **Host:** `0.0.0.0` (listen on all interfaces)
-- **Port:** `8765` (default)
+The AI persona is configured in `main.py`:
 
-Both can be configured via `.env` file.
+```python
+SYSTEM_MESSAGE = (
+    "You are Uttam Giri. Speak in first person as Uttam himself. "
+    "Say: 'Hey, I am Uttam speaking.' "
+    f"Your background: {get_short_resume()}\n\n"
+    "Stay concise (1–2 sentences). Always respond in English. "
+    "If unsure, say 'I don't have that information right now.'"
+)
+```
+
+## Docker Deployment
+
+### Build Image
+
+```bash
+docker build -t telephone-voice-bot .
+```
+
+### Run Container
+
+```bash
+docker run -d \
+  --name voice-bot \
+  -p 5050:5050 \
+  --env-file .env \
+  telephone-voice-bot
+```
+
+**Note:** The Dockerfile should use `CMD ["python", "main.py"]` or `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5050"]` for FastAPI deployment.
+
 
 ## Troubleshooting
 
-### PyAudio Installation Issues
+### Common Issues
 
-If you encounter issues installing PyAudio:
+1. **"Missing OpenAI API key"**
+   - Ensure `.env` file exists with `OPENAI_API_KEY` set
+   - Check that `load_dotenv()` is called
 
-**macOS:**
-```bash
-brew install portaudio
-pip install pyaudio
-```
+2. **"WebSocket connection failed"**
+   - Verify OpenAI API key is valid
+   - Check that you have Realtime API access
+   - Ensure model is set to `gpt-realtime`
 
-**Linux:**
-```bash
-sudo apt-get install portaudio19-dev python3-pyaudio
-pip install pyaudio
-```
+3. **"Twilio can't connect"**
+   - Verify ngrok is running and URL is correct
+   - Check Twilio webhook configuration
+   - Ensure server is accessible from internet
 
-**Windows:**
-```bash
-pip install pipwin
-pipwin install pyaudio
-```
+4. **"No audio response"**
+   - Check server logs for `response.output_audio.delta` events
+   - Verify `streamSid` is set correctly
+   - Ensure audio format is `audio/pcmu` (Twilio compatible)
 
-### WebSocket Connection Errors
+5. **"Resume context not working"**
+   - Verify `resume_full.txt` exists in project root
+   - Check logs for "Searching resume for..." messages
+   - Ensure transcript detection is working
 
-- Ensure the server is running before connecting
-- Check firewall settings for port 8765
-- Verify `WEBSOCKET_HOST` and `WEBSOCKET_PORT` in `.env`
+### Debug Logging
 
-### OpenAI API Errors
+The server logs important events. Look for:
+- `📞 Client connected to media stream`
+- `✅ Session updated successfully`
+- `🎤 User said: [transcript]`
+- `📄 Searching resume for: [query]`
+- `🎵 Sent audio chunk: X bytes`
+- `✅ Audio response completed`
 
-- Verify your `OPENAI_API_KEY` is correct in `.env`
-- Check that you have access to the Realtime API
-- Ensure your API key has sufficient credits
+## API Endpoints
 
-## Development
+- `GET /` - Health check endpoint
+- `POST /incoming-call` - Twilio webhook for incoming calls
+- `WebSocket /media-stream` - Twilio Media Stream connection
 
-### Adding Features
 
-- **Text Processing:** Extend `app/llm_pipeline.py` for additional text processing
-- **Audio Processing:** Modify `app/audio_utils.py` for audio enhancement/filtering
-- **Connection Handling:** Update `app/connect_server.py` for advanced connection management
+## Resources
+
+- [OpenAI Realtime API Documentation](https://platform.openai.com/docs/guides/realtime)
+- [Twilio Media Streams Documentation](https://www.twilio.com/docs/voice/twiml/stream)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Twilio Python Helper Library](https://www.twilio.com/docs/libraries/python)
 
 ## License
 
-This project is provided as-is for development and testing purposes.
+MIT
 
-ONE TERMINAL
+## Author
 
-docker build -t telephone-voice-bot .
-docker run -it --rm -p 8765:8765 --env-file .env telephone-voice-bot
-
-
-OTHER TERMINAL
-
-python3 tests/test_mic_client.py 
-
-
-# telephone-voice-bot
+Uttam Giri
