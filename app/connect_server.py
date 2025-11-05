@@ -27,7 +27,14 @@ async def handler(websocket):
 
     try:
         async for message in websocket:
-            await openai_client.send_audio(message)
+            # Fix 4: Handle both binary (audio) and text messages
+            if isinstance(message, bytes):
+                # Binary message - audio data from Amazon Connect / Twilio / test client
+                await openai_client.send_audio(message)
+            else:
+                # Text message - could be Twilio ping, status, etc.
+                print(f"📨 Received text message: {message[:100]}...")
+                # Optionally handle text messages if needed
     except Exception as e:
         print(f"Error: {e}")
     finally:
