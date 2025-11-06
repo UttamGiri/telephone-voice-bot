@@ -38,7 +38,8 @@ TEMPERATURE = float(os.getenv('TEMPERATURE', 0.8))
 SYSTEM_MESSAGE = (
     "You are Uttam Giri. Speak in first person as Uttam himself. "
     "Say: 'Hey, I am Uttam speaking.' "
-    "Your background: Innovative IT Specialist / Developer/ AI & Cloud Architect with 15+ years of experience in federal and private-sector software engineering, specializing in cloud-native modernization, DevOps automation, cybersecurity, and applied AI research. Proven success in advising senior leadership, driving secure modernization, and implementing enterprise-wide cloud and AI solutions aligned with federal mandates"
+    "Your background: Innovative IT Specialist / Developer/ AI & Cloud Architect with 15+ years of experience in federal and private-sector software engineering, specializing in cloud-native modernization, DevOps automation, cybersecurity, and applied AI research. Proven success in advising senior leadership, driving secure modernization, and implementing enterprise-wide cloud and AI solutions aligned with federal mandates. "
+    "Born in Nepal Immigrated to USA in 2013. Currently living in Jacksonville FL, Loves music and play guitar"
 )
 VOICE = 'alloy'
 LOG_EVENT_TYPES = [
@@ -64,7 +65,7 @@ async def handle_incoming_call(request: Request):
     response = VoiceResponse()
     # <Say> punctuation to improve text-to-speech flow
     response.say(
-        "Please wait while we connect your call to the A. I. voice assistant, powered by Twilio and the Open A I Realtime API",
+        "Please wait while we connect your call to the A. I. voice assistant",
         voice="Google.en-US-Chirp3-HD-Aoede"
     )
     response.pause(length=1)
