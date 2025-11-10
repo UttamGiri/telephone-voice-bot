@@ -1,6 +1,6 @@
-
 # MIT License
 # Copyright (c) 2025 Uttam Giri
+# Original work Copyright (c) 2023 Twilio Inc.
 # Portions of this file are adapted from:
 # https://github.com/twilio-samples/speech-assistant-openai-realtime-api-python
 # under the MIT License.
