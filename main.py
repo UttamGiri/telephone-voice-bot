@@ -1,3 +1,11 @@
+
+# MIT License
+# Copyright (c) 2025 Uttam Giri
+# Portions of this file are adapted from:
+# https://github.com/twilio-samples/speech-assistant-openai-realtime-api-python
+# under the MIT License.
+
+
 import os
 import json
 import base64
